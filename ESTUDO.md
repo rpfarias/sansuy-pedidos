@@ -64,6 +64,20 @@ deploy. Se fosse `compile`, haveria conflito (dois containers).
   Lição: `multiply` **soma** as escalas dos operandos; sempre normalize a escala
   de valores monetários explicitamente.
 
+- **`Failed to introspect Class [ManipuladorGlobalExcecoes] from ClassLoader`
+  ao rodar pelo IntelliJ.** Causa real (no último `Caused by:`):
+  `NoClassDefFoundError: javax/servlet/http/HttpServletRequest`. A classe usa
+  `HttpServletRequest`, que vem do servlet-api fornecido pelo
+  `spring-boot-starter-tomcat` com escopo **`provided`**. O IntelliJ, por padrão,
+  **não** inclui dependências `provided` no classpath de execução (o
+  `mvn spring-boot:run` inclui). Correção: na run configuration, `Modify options`
+  → marcar **"Include dependencies with 'Provided' scope"**.
+  Lições de entrevista: (1) `Failed to introspect Class ... from ClassLoader`
+  significa "classe referenciada ausente no classpath" — leia sempre o último
+  `Caused by`; (2) `provided` = compila mas não empacota/roda (o container
+  fornece), por isso o WAR não leva Tomcat embutido; (3) IDE e Maven montam o
+  classpath de forma diferente.
+
 ### Decisões em aberto (revisitar nas fases indicadas)
 
 - **Contagem de queries (Fase 4):** Hibernate Statistics (default) vs p6spy.
