@@ -1,0 +1,18 @@
+# Build
+target/
+*.war
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Sistema
+*.log
+.DS_Store
+Thumbs.db
