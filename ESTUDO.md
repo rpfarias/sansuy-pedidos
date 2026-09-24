@@ -85,4 +85,55 @@ deploy. Se fosse `compile`, haveria conflito (dois containers).
 
 ---
 
+## Fase 2 — Deploy legado (Tomcat 9 standalone + Docker)
+
+### Conceitos praticados
+
+- **WAR em Tomcat standalone** vs Tomcat **embutido**: no deploy legado o
+  container é externo; o WAR não leva servlet container dentro (por isso o
+  `starter-tomcat` é `provided`).
+- **`docker-compose`** com Postgres + `tomcat:9-jdk8`; WAR publicado via
+  **bind-mount** em `/usr/local/tomcat/webapps/`.
+- **Context path** derivado do nome do WAR (`sansuy-pedidos.war` →
+  `/sansuy-pedidos`); `ROOT.war` serve na raiz.
+- **`catalina.out`** (log central do Tomcat) e **`server.xml`**
+  (`conf/server.xml`): `Connector` (porta), `Host` (`appBase=webapps`,
+  `autoDeploy`, `unpackWARs`), hierarquia Server→Service→Engine→Host→Context.
+- **Redeploy** com `autoDeploy=true`: regerar o WAR e o Tomcat republica.
+- **Config externa vence o properties**: env vars `SPRING_DATASOURCE_*`
+  (relaxed binding) sobrepõem `application.properties` — hostname `db` na rede
+  do compose no lugar de `localhost`.
+- **Servlet puro** (`@WebServlet`/`HttpServlet`) e **Filter** (`@WebFilter`/
+  `javax.servlet.Filter`): a camada abaixo do Spring. O filtro `/*` envolve
+  inclusive o DispatcherServlet; o servlet é roteado direto pelo container.
+- **`@ServletComponentScan`**: registra `@WebServlet/@WebFilter` no modo
+  **embutido**; no WAR standalone o container é quem escaneia.
+
+### Perguntas de entrevista (Fase 2)
+
+**1) Diferença entre Tomcat embutido e standalone; por que `provided`?**
+Embutido: o Tomcat vem como dependência dentro do JAR/execução e a app tem
+`main()`. Standalone: o Tomcat é um servidor externo onde se publica o WAR; o
+container fornece a API de servlet, por isso `spring-boot-starter-tomcat` fica
+`provided` — compila mas não é empacotado, evitando dois containers em conflito.
+
+**2) O que é context path e de onde ele vem?**
+É o prefixo de URL que identifica a aplicação no servidor. Por padrão vem do nome
+do WAR (`sansuy-pedidos.war` → `/sansuy-pedidos`); `ROOT.war` mapeia para a raiz
+(`/`). Pode também ser definido por um elemento `<Context>`.
+
+**3) Qual a ordem entre Filter, Servlet e o DispatcherServlet do Spring?**
+A requisição passa primeiro pela **cadeia de Filters** (`doFilter` antes),
+depois chega ao **Servlet** mapeado — que, para `/`, é o **DispatcherServlet** do
+Spring (o qual roteia para o `@Controller`) ou, para `/servlet/ping`, o nosso
+`HttpServlet` puro. No retorno, o controle volta pela cadeia de Filters (código
+após o `chain.doFilter`). Ou seja, o Filter roda "por fora" de tudo.
+
+### Erros encontrados (Fase 2)
+
+- _(anote aqui os erros que aparecerem ao subir o compose — ex.: WAR virar pasta,
+  falha de conexão ao `db`, 404 por esquecer o context path)_
+
+---
+
 <!-- Próximas fases serão anexadas abaixo conforme avançarmos. -->

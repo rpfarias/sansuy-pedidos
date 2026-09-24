@@ -1,0 +1,54 @@
+# Fase 2 - Deploy legado.
+# Sobe PostgreSQL + Tomcat 9 OFICIAL (jdk8) e publica o WAR em webapps/.
+# A aplicacao NAO roda com Tomcat embutido neste fluxo — quem serve e o
+# container do Tomcat standalone.
+#
+# Pre-requisito: gerar o WAR antes (senao o bind-mount cria um diretorio vazio):
+#   mvn -DskipTests package
+# Depois:
+#   docker compose up            (Ctrl+C para parar; -d para rodar ao fundo)
+#
+# Compose v2 (docker compose ...): a chave "version:" nao e mais necessaria.
+
+services:
+  db:
+    image: postgres:15
+    container_name: sansuy-db
+    environment:
+      POSTGRES_DB: sansuy
+      POSTGRES_USER: sansuy
+      POSTGRES_PASSWORD: sansuy
+    # Exposto em 5433 no host para NAO conflitar com o seu Postgres nativo
+    # (5432). Dentro da rede do compose, o Tomcat fala com "db:5432".
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sansuy -d sansuy"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  tomcat:
+    image: tomcat:9-jdk8
+    container_name: sansuy-tomcat
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Spring Boot le variaveis de ambiente (relaxed binding) e SOBREPOE o
+      # application.properties. Aqui trocamos "localhost" pelo hostname do
+      # servico "db" na rede interna do compose.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sansuy
+      SPRING_DATASOURCE_USERNAME: sansuy
+      SPRING_DATASOURCE_PASSWORD: sansuy
+    ports:
+      - "8080:8080"
+    volumes:
+      # O nome do WAR define o CONTEXT PATH. sansuy-pedidos.war -> /sansuy-pedidos
+      # Para servir na raiz (/), publique como ROOT.war.
+      - ./target/sansuy-pedidos.war:/usr/local/tomcat/webapps/sansuy-pedidos.war
+
+volumes:
+  pgdata:
