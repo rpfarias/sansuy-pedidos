@@ -8,6 +8,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 /**
  * Empresa compradora de laminados.
@@ -15,9 +16,15 @@ import javax.persistence.Table;
  * <p>Observacao de estudo: NAO sobrescrevemos equals/hashCode nesta fase de
  * proposito — o comportamento padrao (identidade) e um dos temas da Fase 4
  * (contrato de equals/hashCode em entidades JPA).
+ *
+ * <p>Unicidade de {@code cnpj} com nome explicito ({@code uk_cliente_cnpj}) —
+ * mesmo motivo do {@code Produto}: evita nome aleatorio e o erro de
+ * "constraint does not exist" com {@code ddl-auto=update}.
  */
 @Entity
-@Table(name = "cliente")
+@Table(name = "cliente",
+        uniqueConstraints = @UniqueConstraint(name = "uk_cliente_cnpj",
+                columnNames = "cnpj"))
 public class Cliente {
 
     @Id
@@ -28,7 +35,7 @@ public class Cliente {
     private String razaoSocial;
 
     /** CNPJ com 14 digitos (validacao simples). Unico. */
-    @Column(nullable = false, unique = true, length = 14)
+    @Column(nullable = false, length = 14)
     private String cnpj;
 
     @Enumerated(EnumType.STRING)

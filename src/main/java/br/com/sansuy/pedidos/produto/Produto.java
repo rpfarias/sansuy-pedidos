@@ -8,20 +8,28 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 /**
  * Item de catalogo (um laminado de PVC). O preco base e por metro quadrado; a
  * estrategia de preco por segmento (Fase 3) parte deste valor.
+ *
+ * <p>A unicidade de {@code codigo} e declarada com NOME EXPLICITO
+ * ({@code uk_produto_codigo}) em vez de {@code @Column(unique=true)}: este ultimo
+ * gera um nome aleatorio, que com {@code ddl-auto=update} pode divergir do que
+ * esta no banco e causar "constraint ... does not exist" no boot.
  */
 @Entity
-@Table(name = "produto")
+@Table(name = "produto",
+        uniqueConstraints = @UniqueConstraint(name = "uk_produto_codigo",
+                columnNames = "codigo"))
 public class Produto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, length = 30)
     private String codigo;
 
     @Column(nullable = false)

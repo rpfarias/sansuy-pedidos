@@ -131,8 +131,21 @@ após o `chain.doFilter`). Ou seja, o Filter roda "por fora" de tudo.
 
 ### Erros encontrados (Fase 2)
 
-- _(anote aqui os erros que aparecerem ao subir o compose — ex.: WAR virar pasta,
-  falha de conexão ao `db`, 404 por esquecer o context path)_
+- **`ERROR: constraint "uk_a32tv48ww0lvru07p7se4c15o" of relation "produto"
+  does not exist`** (Hibernate `ddl-auto=update`). Causa: `@Column(unique=true)`
+  faz o Hibernate gerar a unique constraint com **nome aleatório** (hash); esse
+  nome pode divergir do que está no banco, e num boot seguinte o `update` tenta
+  **dropar** a constraint por um nome inexistente. Correção: declarar a constraint
+  com **nome explícito e estável** —
+  `@Table(uniqueConstraints = @UniqueConstraint(name = "uk_produto_codigo",
+  columnNames = "codigo"))` — e remover `unique=true` do `@Column`. Feito também
+  em `Cliente.cnpj`. Para limpar o estado sujo do banco: `docker compose down -v`
+  (zera o volume) e suba de novo. Lição de entrevista: com `ddl-auto=update`
+  nunca dependa de nomes autogerados; em produção, use migrações
+  (Flyway/Liquibase) e `ddl-auto=validate`.
+
+- _(anote outros que aparecerem — WAR virar pasta, falha de conexão ao `db`,
+  404 por esquecer o context path)_
 
 ---
 
