@@ -49,8 +49,20 @@ deploy. Se fosse `compile`, haveria conflito (dois containers).
 
 ### Erros encontrados (Fase 1)
 
-- _(nenhum registrado ainda — anote aqui os erros que você provocar/encontrar,
-  com a causa e a correção)_
+- **Autenticação Postgres falhou (`FATAL: senha falhou para o usuário "sansuy"`).**
+  Causa: existia o *database* `sansuy`, mas não o *role* de login `sansuy`.
+  Database e role são coisas distintas no Postgres. Correção:
+  `CREATE ROLE sansuy WITH LOGIN PASSWORD 'sansuy';` +
+  `ALTER DATABASE sansuy OWNER TO sansuy;` (o `OWNER` é necessário no PG 15+
+  para o role poder criar tabelas no schema `public`, dono do banco).
+
+- **Escala de `BigDecimal` inconsistente no `subtotal`.** No POST o valor saía
+  com 4 casas (`2268.0000`) e no GET com 2 (`2268.00`). Causa:
+  `metragem(scale 2).multiply(preco(scale 2))` produz escala 4 em memória, mas a
+  coluna é `scale=2`; ao reler do banco a escala cai para 2. Correção:
+  `.setScale(2, RoundingMode.HALF_UP)` no cálculo do subtotal (alinha com o SPEC).
+  Lição: `multiply` **soma** as escalas dos operandos; sempre normalize a escala
+  de valores monetários explicitamente.
 
 ### Decisões em aberto (revisitar nas fases indicadas)
 

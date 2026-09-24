@@ -1,6 +1,7 @@
 package br.com.sansuy.pedidos.pedido;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -55,7 +56,10 @@ public class ItemPedido {
         this.produto = produto;
         this.metragem = metragem;
         this.precoUnitario = precoUnitario;
-        this.subtotal = metragem.multiply(precoUnitario);
+        // Normaliza a escala para 2 casas (HALF_UP): metragem*preco gera escala
+        // 4 em memoria, mas a coluna e scale=2 — sem isso o subtotal do POST
+        // sai com 4 casas e o do GET (relido do banco) com 2, inconsistente.
+        this.subtotal = metragem.multiply(precoUnitario).setScale(2, RoundingMode.HALF_UP);
     }
 
     public Long getId() {
