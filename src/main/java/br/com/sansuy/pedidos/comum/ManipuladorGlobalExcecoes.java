@@ -12,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import br.com.sansuy.pedidos.pedido.estado.TransicaoInvalidaException;
+
 /**
  * Tratamento centralizado de excecoes da API (padrao "controller advice").
  *
@@ -34,6 +36,13 @@ public class ManipuladorGlobalExcecoes {
     public ResponseEntity<RespostaErro> tratarRegraNegocio(
             RegraNegocioException ex, HttpServletRequest req) {
         return construir(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
+    }
+
+    /** Transicao de status invalida (padrao State) -> 409 Conflict. */
+    @ExceptionHandler(TransicaoInvalidaException.class)
+    public ResponseEntity<RespostaErro> tratarTransicaoInvalida(
+            TransicaoInvalidaException ex, HttpServletRequest req) {
+        return construir(HttpStatus.CONFLICT, ex.getMessage(), req);
     }
 
     /** Falha de Bean Validation (@Valid) -> 400 com a lista de campos. */

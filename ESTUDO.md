@@ -149,4 +149,79 @@ após o `chain.doFilter`). Ou seja, o Filter roda "por fora" de tudo.
 
 ---
 
+## Fase 3 — Padrões de projeto no domínio
+
+### O que foi feito
+
+- **Strategy** (`pedido/preco`) — `EstrategiaPreco` + 4 `@Component` por segmento
+  + `SeletorEstrategiaPreco` (monta mapa `segmento→estratégia` a partir da
+  `List<EstrategiaPreco>` injetada pelo Spring). **[EU FAÇO]:** o `aplicar(...)`.
+- **State** (`pedido/estado`) — `EstadoPedido` (por padrão tudo bloqueado) + 6
+  estados + `EstadoPedidoFactory`. **[EU FAÇO]:** overrides das transições válidas.
+- **Builder** (`PedidoBuilder`) — monta o agregado usando a Strategy no preço.
+- **Factory** (`pedido/documento`) — `DocumentoPedidoFactory` escolhe
+  `GeradorCsv`/`GeradorPdf` (OpenPDF) por `FormatoDocumento`.
+- **Observer** (`ApplicationEvent`) — `PedidoService.aprovar` publica
+  `PedidoAprovadoEvent`; `OuvintePedidoAprovado` (`@EventListener`) cria a
+  `OrdemProducao` na mesma transação.
+
+### Padrões que o próprio Spring usa (pergunta clássica)
+
+- **IoC / DI (Injeção de Dependência)** — o container cria e injeta os beans; nós
+  não damos `new` nos serviços. É a base de tudo.
+- **Singleton** — o escopo padrão de um bean é singleton (uma instância por
+  contexto). Diferente do Singleton GoF (estático global): aqui o container
+  gerencia o ciclo de vida.
+- **Proxy** — `@Transactional`, `@Async`, `@Cacheable` funcionam por proxies
+  (JDK dynamic proxy ou CGLIB) que envolvem o bean. Por isso a **auto-invocação**
+  (`this.metodo()`) não passa pelo proxy — tema da Fase 4.
+- **Template Method** — as classes `*Template` (`JdbcTemplate`, `RestTemplate`,
+  `JpaTemplate`) fixam o esqueleto (abrir conexão, tratar erro, fechar) e deixam
+  o passo variável para você (o callback).
+- **Factory** — `BeanFactory`/`ApplicationContext` são fábricas de beans;
+  `FactoryBean` é uma fábrica registrada no container.
+- (Bônus) **Observer** — o próprio `ApplicationEvent`/`@EventListener` que usamos.
+
+### Perguntas de entrevista (Fase 3)
+
+**1) Strategy vs State — qual a diferença?** Ambos trocam comportamento por
+composição, mas com intenção diferente: **Strategy** escolhe um algoritmo
+intercambiável (aqui, cálculo de preço) definido de fora; **State** muda o
+comportamento conforme o estado interno do objeto e, tipicamente, controla as
+**transições** entre estados. Um é "qual algoritmo", o outro é "em que fase estou".
+
+**2) Como o Spring ajuda a implementar Strategy?** Injetando todas as
+implementações de uma interface como `List<T>` (ou `Map<String,T>`), o que
+permite um seletor montar o mapa e despachar sem `if/switch`. Adicionar uma nova
+estratégia é criar um `@Component` — o seletor não muda (aberto/fechado).
+
+**3) Por que usar ApplicationEvent (Observer) em vez de chamar o serviço de
+produção direto no `aprovar`?** Para **desacoplar**: o pedido não precisa
+conhecer a produção. Publicar um evento permite ter zero, um ou vários ouvintes
+(ex.: também notificar por e-mail) sem alterar o publicador. `@EventListener`
+roda na mesma transação; `@TransactionalEventListener(AFTER_COMMIT)` só após o
+commit.
+
+### [EU FAÇO] — implementado (16/16 testes verdes)
+
+1. **Strategy:** `aplicar(...)` = `precoBase.multiply(FATOR).setScale(2, HALF_UP)`
+   com `FATOR` `static final` (0.95 / 1.08 / 0.97) e `COMUNICACAO_VISUAL` só
+   `setScale(2)`. Lições: (a) fator via `new BigDecimal("0.95")` — **String**,
+   nunca `double` (imprecisão binária); (b) `multiply` soma as escalas, por isso
+   `setScale` no fim.
+2. **State:** cada estado sobrescreve só as transições permitidas; o `default`
+   da interface bloqueia todo o resto (→ `TransicaoInvalidaException` → 409).
+   Lição: modelar "o que é permitido" em cada estado é mais seguro que listar "o
+   que é proibido" — o que você esquece de declarar já sai bloqueado.
+
+Verificado ao vivo (ciclo completo): pedido TRANSPORTE com preço 108,00 (+8%),
+aprovar gerou a OrdemProducao (Observer), transição inválida deu 409, caminho
+feliz até EXPEDIDO, e documento CSV + PDF (assinatura `%PDF`).
+
+### Erros encontrados (Fase 3)
+
+- _(anote aqui)_
+
+---
+
 <!-- Próximas fases serão anexadas abaixo conforme avançarmos. -->

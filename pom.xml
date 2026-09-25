@@ -58,6 +58,14 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- OpenPDF: geracao de PDF (Fase 3, Factory de documentos).
+             Fork livre (LGPL/MPL) do iText 4, compativel com Java 8. -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>1.3.35</version>
+        </dependency>
+
         <!-- Tomcat fornecido pelo container (nao embutido no WAR).
              provided = compila contra a API de servlet, mas nao empacota. -->
         <dependency>
