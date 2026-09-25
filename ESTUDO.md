@@ -224,4 +224,23 @@ feliz até EXPEDIDO, e documento CSV + PDF (assinatura `%PDF`).
 
 ---
 
+## Fase 4 — Laboratório JPA/Hibernate
+
+### Parte 1 — N+1 (medido)
+
+- Medido com `hibernate.generate_statistics` + `Statistics.getPrepareStatementCount()`.
+- `findAll()` + acessos LAZY (cliente/itens/produto) → **13 queries**.
+- `JOIN FETCH` → **1 query**. `@EntityGraph` → **1 query**.
+- `JOIN FETCH` precisa de `distinct` (o join da coleção gera produto cartesiano).
+- **Pega-ratão:** não dá `JOIN FETCH` em duas coleções `List` juntas
+  (`MultipleBagFetchException`) — use `Set` ou consultas separadas.
+- `@EntityGraph` (declarativo) × `JOIN FETCH` (mais controle: filtro, left/inner).
+- `PedidoService.listar()` corrigido para usar `buscarTodosComJoinFetch()`.
+
+**Perguntas:** (1) O que é N+1 e como detectar? Log de SQL / contagem de queries;
+1 query da lista + N das associações. (2) Diferença JOIN FETCH × EntityGraph?
+Um é JPQL explícito, o outro é declarativo; ambos evitam o N+1 em 1 query.
+(3) Por que o `distinct`? Para remover as duplicatas do produto cartesiano do join
+da coleção.
+
 <!-- Próximas fases serão anexadas abaixo conforme avançarmos. -->

@@ -120,13 +120,13 @@ public class PedidoService {
     /**
      * Lista todos os pedidos.
      *
-     * <p>ATENCAO (proposital): mapear cada pedido acessa itens/cliente LAZY,
-     * gerando o problema de N+1. A correcao com JOIN FETCH / @EntityGraph e o
-     * exercicio [EU FACO] da Fase 4.
+     * <p>Fase 4: usamos {@code buscarTodosComJoinFetch()} para carregar
+     * cliente + itens + produto numa ÚNICA query, evitando o N+1 que
+     * ocorreria com o {@code findAll()} padrão ao mapear cada pedido.
      */
     @Transactional(readOnly = true)
     public List<PedidoResponse> listar() {
-        return repositorio.findAll().stream()
+        return repositorio.buscarTodosComJoinFetch().stream()
                 .map(PedidoResponse::de)
                 .collect(Collectors.toList());
     }
